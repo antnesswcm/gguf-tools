@@ -530,12 +530,9 @@ int main(int argc, char **argv) {
          * making the tool simpler to use. */
         if (!strcmp(argv[j],"--verbose")) {
             argv[j] = NULL;
-            argc--;
             Opt.verbose = 1;
-        }
-        if (!strcmp(argv[j],"--diffable")) {
+        } else if (!strcmp(argv[j],"--diffable")) {
             argv[j] = NULL;
-            argc--;
             Opt.diffable = 1;
         }
     }
@@ -544,6 +541,8 @@ int main(int argc, char **argv) {
     for (int j = 1; j < argc; j++) {
         if (argv[j] == NULL) {
             memmove(argv+j, argv+j+1, sizeof(char*) * (argc-j));
+            argc--;
+            j--;
         }
     }
 
