@@ -39,39 +39,40 @@ extern const char *SDS_NOINIT;
 #include <sys/types.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include "compat.h"   /* COMPAT_PACKED_STRUCT / COMPAT_STRUCT_CLOSE for MSVC */
 
 typedef char *sds;
 
 /* Note: sdshdr5 is never used, we just access the flags byte directly.
  * However is here to document the layout of type 5 SDS strings. */
-struct __attribute__ ((__packed__)) sdshdr5 {
+COMPAT_PACKED_STRUCT sdshdr5 {
     unsigned char flags; /* 3 lsb of type, and 5 msb of string length */
     char buf[];
-};
-struct __attribute__ ((__packed__)) sdshdr8 {
+COMPAT_STRUCT_CLOSE
+COMPAT_PACKED_STRUCT sdshdr8 {
     uint8_t len; /* used */
     uint8_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
-};
-struct __attribute__ ((__packed__)) sdshdr16 {
+COMPAT_STRUCT_CLOSE
+COMPAT_PACKED_STRUCT sdshdr16 {
     uint16_t len; /* used */
     uint16_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
-};
-struct __attribute__ ((__packed__)) sdshdr32 {
+COMPAT_STRUCT_CLOSE
+COMPAT_PACKED_STRUCT sdshdr32 {
     uint32_t len; /* used */
     uint32_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
-};
-struct __attribute__ ((__packed__)) sdshdr64 {
+COMPAT_STRUCT_CLOSE
+COMPAT_PACKED_STRUCT sdshdr64 {
     uint64_t len; /* used */
     uint64_t alloc; /* excluding the header and null terminator */
     unsigned char flags; /* 3 lsb of type, 5 unused bits */
     char buf[];
-};
+COMPAT_STRUCT_CLOSE
 
 #define SDS_TYPE_5  0
 #define SDS_TYPE_8  1

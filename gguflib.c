@@ -1,7 +1,7 @@
+#include "wincompat.h"   /* Windows/MinGW: mmap/munmap/fstat shims; must come first */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <sys/mman.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -146,7 +146,11 @@ void gguf_rewind(gguf_ctx *ctx) {
  *
  * Return 1 on success, 0 on error. */
 int gguf_remap(gguf_ctx *ctx) {
+#if defined(_WIN32)
+    struct _stat64 sb;   /* st_size is 8 bytes; the SDK's struct stat truncates to 32-bit */
+#else
     struct stat sb;
+#endif
 
     /* Unmap if the file was already memory mapped. */
     if (ctx->data) munmap(ctx->data,ctx->size);

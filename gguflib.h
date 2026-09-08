@@ -9,6 +9,7 @@
 #define GGUFLIB_H
 
 #include <stdint.h>
+#include "compat.h"      /* COMPAT_PACKED_MEMBER for MSVC */
 
 /* ============================ Enums and structures ======================== */
 
@@ -96,6 +97,26 @@ struct gguf_string {
     char string[];
 };
 
+// Array header for the ARRAY value type.  In the GGUF wire format the
+// array header is a 4-byte element type followed by an 8-byte element
+// count, with no padding between them.  We declare a dedicated packed
+// struct for it, so it works identically under MSVC (which would
+// otherwise 8-byte-align the uint64 field) and under GCC (which honours
+// `__attribute__((packed))` on the member).
+#if defined(_MSC_VER)
+__pragma(pack(push, 1))
+struct gguf_array_hdr {
+    uint32_t type;
+    uint64_t len;
+};
+__pragma(pack(pop))
+#else
+struct __attribute__((packed)) gguf_array_hdr {
+    uint32_t type;
+    uint64_t len;
+};
+#endif
+
 // Union of possible values.
 union gguf_value {
     uint8_t uint8;
@@ -110,13 +131,7 @@ union gguf_value {
     double float64;
     uint8_t boolval;
     struct gguf_string string;
-    struct {
-        // Any value type is valid, including arrays.
-        uint32_t type;
-        // Number of elements, not bytes
-        uint64_t len;
-        // The array of values follow...
-    } __attribute__((packed)) array;
+    struct gguf_array_hdr array;
 };
 
 // Header

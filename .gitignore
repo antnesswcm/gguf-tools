@@ -1,1 +1,13 @@
+# Build outputs
+build/
+*.exe
+*.o
+*.obj
+*.pdb
+*.ilk
+
+# Archived build artifacts (never deleted, moved here for inspection)
+.del/
+
+# Legacy binary at repo root (pre-build/ layout)
 gguf-tools
