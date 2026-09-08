@@ -1,43 +1,45 @@
 # gguf-tools
 
-[English](README.en.md)
+[中文](README.md)
 
-GGUF 模型文件的查看、比较与检查工具。基于 C 语言，零依赖，可直接编译运行。
+GGUF model file viewer, comparator, and inspector. Written in C with zero dependencies.
 
-## 安装
+## Install
 
 [Latest Release](https://github.com/antnesswcm/gguf-tools/releases)
 
-或从源码编译：
+Or build from source:
 
 ```console
 $ git clone <repo-url> && cd gguf-tools
 $ make
 ```
 
-Windows 用户可使用 `build-msvc.ps1`：
+On Windows with MSVC:
 
 ```console
 > .\build-msvc.ps1 build
 ```
 
-产物位于 `build\x64\release\gguf-tools.exe`。
+Output: `build\x64\release\gguf-tools.exe`.
 
-## 命令
+## Usage
 
 ```
-用法: gguf-tools <子命令> [参数...] [选项...]
-子命令:
-  show              <文件名>                        显示 GGUF 模型的键值对与张量信息
-  inspect-tensor    <文件名> <张量名> [数量]        显示指定张量的权重值
-  compare           <文件1> <文件2>                 比较两个 GGUF 文件的权重差异百分比
-  split-mixtral     <专家ID> mixtral.gguf out.gguf  从 Mixtral MoE 中抽取专家权重
-选项:
-  --verbose   show  模式下打印完整数组（如 tokenizer 词表）
-  --diffable  show  模式下隐藏偏移与字节数，便于 diff
+Usage: gguf-tools <subcommand> [arguments...] [options...]
+Subcommands:
+  show <filename>                                   -- show GGUF model keys and tensors.
+  inspect-tensor <filename> <tensor-name> [count]   -- show tensor weights.
+  compare <file1> <file2>                           -- avg weights diff for matching tensor names.
+  split-mixtral <ids...> mixtral.gguf out.gguf      -- extract expert.
+Options:
+  --verbose       :With 'show', print full arrays (e.g. token lists)
+  --diffable      :Don't show tensor file offsets and sizes
+Example:
+  split-mixtral 65230776370407150546470161412165 mixtral.gguf out.gguf
 ```
 
-## 示例
+## Examples
 
 ### show
 
@@ -59,13 +61,14 @@ tokenizer.ggml.add_bos_token: [bool] false
 tokenizer.ggml.model: [string] gpt2
 tokenizer.ggml.tokens: [array] [!, ", #, $, %, &, ', ...]
 
-... 更多 key-value 对 ...
+... many more key-value pairs ...
 
 q8_0 tensor token_embd.weight @1806176, 131072000 weights, dims [2560,51200], 139264000 bytes
 f32 tensor blk.0.attn_norm.bias @141070176, 2560 weights, dims [2560], 10240 bytes
 f32 tensor blk.0.attn_norm.weight @141080416, 2560 weights, dims [2560], 10240 bytes
 q8_0 tensor blk.0.attn_qkv.weight @141121376, 19660800 weights, dims [2560,7680], 20889600 bytes
-... 更多张量 ...
+
+... many more tensors ...
 ```
 
 ### compare
@@ -82,7 +85,7 @@ $ gguf-tools compare mistral-7b-instruct-v0.2.Q8_0.gguf \
 [blk.0.ffn_down.weight]: avg weights difference: 39.632648%
 ```
 
-对同名且参数量相同的张量计算平均权重差异。值越小，说明两个模型的该层越接近——可用于判断 finetune 关系、冻结层、修改幅度等。
+Computes average weight difference for tensors with matching names and parameter counts. Lower values indicate the two models share that layer more closely — useful for detecting finetune lineage, frozen layers, and modification magnitude.
 
 ### inspect-tensor
 
@@ -98,4 +101,4 @@ $ gguf-tools inspect-tensor phi-2.Q8_0.gguf token_embd.weight 8
 $ gguf-tools split-mixtral 65230776370407150546470161412165 mixtral.gguf out.gguf
 ```
 
-32 位数字串对应 32 层，每位数字（0-7）表示该层要抽取的专家编号。以此方式生成的模型不能用于推理，仅供库使用演示。
+The 32-digit string maps to 32 layers; each digit (0-7) selects the expert to extract for that layer. Models produced this way cannot run inference — this is a library usage demo only.
