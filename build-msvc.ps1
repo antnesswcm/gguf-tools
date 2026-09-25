@@ -19,8 +19,14 @@ param(
     [ValidateSet('release','debug')]
     [string]$Configuration = 'release',
 
+    # x86 (32-bit) is deprecated: a 32-bit process cannot reliably mmap
+    # multi-GB GGUF models (compare() needs 2x mmap, and the 32-bit SIZE_T
+    # mmap length argument silently truncates large file sizes). The x86
+    # code path is retained below for legacy/reference only and is hidden
+    # from the help text; passing -Architecture x86 explicitly will still
+    # build but emits a deprecation warning.
     [Parameter(Position = 2)]
-    [ValidateSet('x86','x64')]
+    [ValidateSet('x64','x86')]
     [string]$Architecture = 'x64',
 
     [switch]$help,
@@ -34,8 +40,7 @@ $Repo         = $PSScriptRoot
 $Configuration = $Configuration.ToLower()
 $Architecture = $Architecture.ToLower()
 $BuildRoot    = Join-Path $Repo 'build'
-$ArchDir      = Join-Path $BuildRoot $Architecture
-$ConfigDir    = Join-Path $ArchDir $Configuration
+$ConfigDir    = Join-Path $BuildRoot $Configuration
 $Src          = 'gguf-tools.c gguflib.c sds.c fp16.c'
 
 # ---------------------------------------------------------------------------
@@ -46,21 +51,23 @@ if ($Command -eq 'help' -or $help) {
 gguf-tools build script (MSVC)
 
 Usage:
-  build-msvc.ps1 build [release|debug] [x86|x64]
+  build-msvc.ps1 build [release|debug]
   build-msvc.ps1 clean
+  build-msvc.ps1 help
 
 Commands:
-  build    Compile gguf-tools
+  build    Compile gguf-tools (x64)
   clean    Delete build artifacts (keeps directories)
+  help     Show this help
 
 Options:
   -VcVarsPath <path>    Explicit vcvars*.bat path (skips auto-detection)
   -help                 Show this help
 
 Examples:
-  .\build-msvc.ps1 build                     -> release x64
-  .\build-msvc.ps1 build debug x86           -> debug x86
-  .\build-msvc.ps1 clean                     -> remove all outputs
+  .\build-msvc.ps1 build              -> release x64
+  .\build-msvc.ps1 build debug        -> debug x64
+  .\build-msvc.ps1 clean              -> remove all outputs
 "@
     exit 0
 }
@@ -112,17 +119,15 @@ function Find-VcVars {
 # ---------------------------------------------------------------------------
 if ($Command -eq 'clean') {
     $deleted = 0
-    foreach ($arch in @('x86','x64')) {
-        foreach ($cfg in @('release','debug')) {
-            $dir = Join-Path (Join-Path $BuildRoot $arch) $cfg
-            if (-not (Test-Path $dir)) { continue }
-            $items = @(Get-ChildItem $dir -Force -ErrorAction SilentlyContinue)
-            $n = $items.Count
-            if ($n -eq 0) { continue }
-            Remove-Item $items -Force
-            Write-Host "[clean] build\${arch}\${cfg}\  ($n files deleted)"
-            $deleted += $n
-        }
+    foreach ($cfg in @('release','debug')) {
+        $dir = Join-Path $BuildRoot $cfg
+        if (-not (Test-Path $dir)) { continue }
+        $items = @(Get-ChildItem $dir -Force -ErrorAction SilentlyContinue)
+        $n = $items.Count
+        if ($n -eq 0) { continue }
+        Remove-Item $items -Force
+        Write-Host "[clean] build\${cfg}\  ($n files deleted)"
+        $deleted += $n
     }
     if ($deleted -eq 0) { Write-Host "[clean] build/ is already empty" }
     exit 0
@@ -137,6 +142,13 @@ $vcvars = Find-VcVars -arch $Architecture
 $flags = switch ($Configuration) {
     'release' { '/nologo /O2 /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /utf-8' }
     'debug'   { '/nologo /Od /Zi /D_CRT_SECURE_NO_WARNINGS /utf-8' }
+}
+
+if ($Architecture -eq 'x86') {
+    Write-Host "WARNING: x86 builds are deprecated and unreliable for GGUF models >1GB"
+    Write-Host "  (32-bit address space + SIZE_T mmap truncation). Prefer x64."
+    Write-Host "  x86 is retained only for legacy/reference use."
+    Write-Host ""
 }
 
 Write-Host "vcvars      : $vcvars"
