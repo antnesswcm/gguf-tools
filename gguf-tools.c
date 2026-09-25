@@ -7,6 +7,10 @@
 #include <math.h>
 #include <inttypes.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "gguflib.h"
 #include "sds.h"
 #include "fp16.h"
@@ -519,7 +523,44 @@ void gguf_tools_usage(const char *progname) {
     exit(1);
 }
 
-int main(int argc, char **argv) {
+/* ========================== Encoding handling (Windows) ==================== */
+
+#ifdef _WIN32
+
+/* Convert wide string (UTF-16) to char string using specified code page.
+   Returns malloc'd buffer. */
+static char *wide_to_char(const wchar_t *wstr, UINT cp) {
+    int len = WideCharToMultiByte(cp, 0, wstr, -1, NULL, 0, NULL, NULL);
+    if (len <= 0) return NULL;
+    
+    char *str = (char *)malloc(len);
+    if (!str) return NULL;
+    
+    WideCharToMultiByte(cp, 0, wstr, -1, str, len, NULL, NULL);
+    return str;
+}
+
+/* Convert wide argv to char argv using console encoding. */
+static char **convert_wide_argv(int argc, wchar_t **wargv) {
+    UINT cp = GetConsoleOutputCP();
+    
+    char **argv = (char **)malloc(argc * sizeof(char *));
+    if (!argv) return NULL;
+    
+    for (int i = 0; i < argc; i++) {
+        argv[i] = wide_to_char(wargv[i], cp);
+        if (!argv[i]) {
+            for (int j = 0; j < i; j++) free(argv[j]);
+            free(argv);
+            return NULL;
+        }
+    }
+    return argv;
+}
+
+#endif /* _WIN32 */
+
+int main_impl(int argc, char **argv) {
     if (argc < 3) gguf_tools_usage(argv[0]);
 
     /* Parse options before getting into subcommands parsing. */
@@ -575,3 +616,33 @@ int main(int argc, char **argv) {
     }
     return 0;
 }
+
+/* ========================== Main entry point =============================== */
+
+#ifdef _WIN32
+
+int wmain(int argc, wchar_t **wargv) {
+    char **argv = convert_wide_argv(argc, wargv);
+    if (!argv) {
+        wprintf(L"Failed to convert command line arguments\n");
+        return 1;
+    }
+    
+    int ret = main_impl(argc, argv);
+    
+    /* Free converted argv */
+    for (int i = 0; i < argc; i++) {
+        free(argv[i]);
+    }
+    free(argv);
+    
+    return ret;
+}
+
+#else
+
+int main(int argc, char **argv) {
+    return main_impl(argc, argv);
+}
+
+#endif
