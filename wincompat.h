@@ -35,6 +35,14 @@
 #include <fcntl.h>    /* O_RDONLY / O_WRONLY / O_RDWR / O_APPEND / O_ACCMODE */
 #include <sys/stat.h> /* struct stat / S_IFREG */
 
+/* On POSIX (Linux/macOS) the native mmap/munmap and the PROT_ / MAP_
+ * constants live in <sys/mman.h>; gguflib.c relies on wincompat.h to supply
+ * them on Windows, so include the native header here for the non-Windows
+ * path -- otherwise mmap/PROT_READ/MAP_SHARED/MAP_FAILED are undeclared. */
+#if !defined(_WIN32)
+#include <sys/mman.h>
+#endif
+
 #if defined(_WIN32)
 
 #include <windows.h>

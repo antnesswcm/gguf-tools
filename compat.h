@@ -49,10 +49,11 @@ typedef long long ssize_t;
 
 #else  /* GCC / Clang / anything GNU-ish */
 
-#ifndef _SSIZE_T_DEFINED
-#define _SSIZE_T_DEFINED
-typedef long long ssize_t;
-#endif
+/* On non-MSVC targets ssize_t is already declared by the system headers
+ * (glibc <stdio.h>/<sys/types.h>; MinGW-w64 <sys/types.h>).  The
+ * _SSIZE_T_DEFINED guard is a Windows-SDK convention that glibc does NOT
+ * set, so re-typedefing ssize_t here as 'long long' clashes with glibc's
+ * native 'long' typedef (same size, distinct type).  Leave it to the system. */
 
 #define COMPAT_PACKED_STRUCT struct __attribute__((packed))
 #define COMPAT_STRUCT_CLOSE };
